@@ -448,7 +448,7 @@ export class Menu extends Widget {
    *
    * This is a no-op if the menu is already attached to the DOM.
    */
-  open(x: number, y: number, options: Menu.IOpenOptions = {}): void {
+  open(x: number, y: number, options: Menu.IOpenOptions = {}, anchor?: HTMLElement): void {
     // Bail early if the menu is already attached.
     if (this.isAttached) {
       return;
@@ -459,7 +459,7 @@ export class Menu extends Widget {
     let forceY = options.forceY || false;
 
     // Open the menu as a root menu.
-    Private.openRootMenu(this, x, y, forceX, forceY);
+    Private.openRootMenu(this, x, y, forceX, forceY, anchor?.ownerDocument);
 
     // Activate the menu to accept keyboard input.
     this.activate();
@@ -512,7 +512,7 @@ export class Menu extends Widget {
     this.node.addEventListener('mouseenter', this);
     this.node.addEventListener('mouseleave', this);
     this.node.addEventListener('contextmenu', this);
-    document.addEventListener('mousedown', this, true);
+    this.node.ownerDocument.addEventListener('mousedown', this, true);
   }
 
   /**
@@ -525,7 +525,7 @@ export class Menu extends Widget {
     this.node.removeEventListener('mouseenter', this);
     this.node.removeEventListener('mouseleave', this);
     this.node.removeEventListener('contextmenu', this);
-    document.removeEventListener('mousedown', this, true);
+    this.node.ownerDocument.removeEventListener('mousedown', this, true);
   }
 
   /**
@@ -1535,14 +1535,15 @@ namespace Private {
     x: number,
     y: number,
     forceX: boolean,
-    forceY: boolean
+    forceY: boolean,
+    targetDocument?: Document
   ): void {
     // Get the current position and size of the main viewport.
     const windowData = getWindowData();
     let px = windowData.pageXOffset;
     let py = windowData.pageYOffset;
-    let cw = windowData.clientWidth;
-    let ch = windowData.clientHeight;
+    let cw = targetDocument ? targetDocument.documentElement.clientWidth : windowData.clientWidth;
+    let ch = targetDocument ? targetDocument.documentElement.clientHeight : windowData.clientHeight;
 
     // Ensure the menu is updated before attaching and measuring.
     MessageLoop.sendMessage(menu, Widget.Msg.UpdateRequest);
@@ -1559,7 +1560,7 @@ namespace Private {
     style.maxHeight = `${maxHeight}px`;
 
     // Attach the menu to the document.
-    Widget.attach(menu, document.body);
+    Widget.attach(menu, targetDocument?.body ?? document.body);
 
     // Measure the size of the menu.
     let { width, height } = node.getBoundingClientRect();

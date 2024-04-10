@@ -816,7 +816,7 @@ export class MenuBar extends Widget {
 
     // Open the new menu at the computed location.
     if (newMenu.items.length > 0) {
-      newMenu.open(left, top, this._forceItemsPosition);
+      newMenu.open(left, top, this._forceItemsPosition, this.node);
     }
   }
 
