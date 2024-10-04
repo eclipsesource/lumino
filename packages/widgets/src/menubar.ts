@@ -145,11 +145,6 @@ export class MenuBar extends Widget {
       value = -1;
     }
 
-    // An empty menu cannot be active
-    if (value > -1 && this._menus[value].items.length === 0) {
-      value = -1;
-    }
-
     // Bail early if the index will not change.
     if (this._activeIndex === value) {
       return;

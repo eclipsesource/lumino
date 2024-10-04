@@ -520,7 +520,7 @@ export class Menu extends Widget {
     this.node.addEventListener('mouseenter', this);
     this.node.addEventListener('mouseleave', this);
     this.node.addEventListener('contextmenu', this);
-    document.addEventListener('mousedown', this, true);
+    this.node.ownerDocument.addEventListener('mousedown', this, true);
   }
 
   /**
@@ -533,7 +533,7 @@ export class Menu extends Widget {
     this.node.removeEventListener('mouseenter', this);
     this.node.removeEventListener('mouseleave', this);
     this.node.removeEventListener('contextmenu', this);
-    document.removeEventListener('mousedown', this, true);
+    this.node.ownerDocument.removeEventListener('mousedown', this, true);
   }
 
   /**
@@ -1446,8 +1446,8 @@ namespace Private {
    * Create the DOM node for a menu.
    */
   export function createNode(): HTMLDivElement {
-    let node = document.createElement('div');
-    let content = document.createElement('ul');
+    let node = this.node.ownerDocument.createElement('div');
+    let content = this.node.ownerDocument.createElement('ul');
     content.className = 'lm-Menu-content';
     node.appendChild(content);
     content.setAttribute('role', 'menu');
@@ -1545,8 +1545,8 @@ namespace Private {
     return {
       pageXOffset: window.pageXOffset,
       pageYOffset: window.pageYOffset,
-      clientWidth: document.documentElement.clientWidth,
-      clientHeight: document.documentElement.clientHeight
+      clientWidth: this.node.ownerDocument.documentElement.clientWidth,
+      clientHeight: this.node.ownerDocument.documentElement.clientHeight
     };
   }
 
@@ -1636,7 +1636,7 @@ namespace Private {
     style.maxHeight = `${maxHeight}px`;
 
     // Attach the menu to the document.
-    Widget.attach(submenu, document.body);
+    Widget.attach(submenu, this.node.ownerDocument.body);
 
     // Measure the size of the menu.
     let { width, height } = node.getBoundingClientRect();
