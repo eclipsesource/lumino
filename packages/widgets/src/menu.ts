@@ -520,7 +520,7 @@ export class Menu extends Widget {
     this.node.addEventListener('mouseenter', this);
     this.node.addEventListener('mouseleave', this);
     this.node.addEventListener('contextmenu', this);
-    document.addEventListener('mousedown', this, true);
+    this.node.ownerDocument.addEventListener('mousedown', this, true);
   }
 
   /**
@@ -533,7 +533,7 @@ export class Menu extends Widget {
     this.node.removeEventListener('mouseenter', this);
     this.node.removeEventListener('mouseleave', this);
     this.node.removeEventListener('contextmenu', this);
-    document.removeEventListener('mousedown', this, true);
+    this.node.ownerDocument.removeEventListener('mousedown', this, true);
   }
 
   /**
@@ -1419,13 +1419,13 @@ namespace Private {
   let transientWindowDataCache: IWindowData | null = null;
   let transientCacheCounter: number = 0;
 
-  function getWindowData(): IWindowData {
+  function getWindowData(ownerDocument: Document): IWindowData {
     // if transient cache is in use, take one from it
     if (transientCacheCounter > 0) {
       transientCacheCounter--;
       return transientWindowDataCache!;
     }
-    return _getWindowData();
+    return _getWindowData(ownerDocument);
   }
 
   /**
@@ -1541,12 +1541,12 @@ namespace Private {
     return result;
   }
 
-  function _getWindowData(): IWindowData {
+  function _getWindowData(ownerDocument: Document): IWindowData {
     return {
       pageXOffset: window.pageXOffset,
       pageYOffset: window.pageYOffset,
-      clientWidth: document.documentElement.clientWidth,
-      clientHeight: document.documentElement.clientHeight
+      clientWidth: ownerDocument.documentElement.clientWidth,
+      clientHeight: ownerDocument.documentElement.clientHeight
     };
   }
 
@@ -1563,7 +1563,7 @@ namespace Private {
     ref: HTMLElement | null
   ): void {
     // Get the current position and size of the main viewport.
-    const windowData = getWindowData();
+    const windowData = getWindowData(host?.ownerDocument || document);
     let px = windowData.pageXOffset;
     let py = windowData.pageYOffset;
     let cw = windowData.clientWidth;
@@ -1636,7 +1636,7 @@ namespace Private {
     style.maxHeight = `${maxHeight}px`;
 
     // Attach the menu to the document.
-    Widget.attach(submenu, document.body);
+    Widget.attach(submenu, itemNode.ownerDocument.body);
 
     // Measure the size of the menu.
     let { width, height } = node.getBoundingClientRect();
