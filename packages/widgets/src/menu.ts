@@ -513,7 +513,7 @@ export class Menu extends Widget {
   /**
    * A message handler invoked on a `'before-attach'` message.
    */
-  protected onBeforeAttach(msg: Message): void {
+  protected onAfterAttach(msg: Message): void {
     this.node.addEventListener('keydown', this);
     this.node.addEventListener('mouseup', this);
     this.node.addEventListener('mousemove', this);
@@ -533,7 +533,7 @@ export class Menu extends Widget {
     this.node.removeEventListener('mouseenter', this);
     this.node.removeEventListener('mouseleave', this);
     this.node.removeEventListener('contextmenu', this);
-    this.node.ownerDocument.removeEventListener('mousedown', this, true);
+    document.removeEventListener('mousedown', this, true);
   }
 
   /**
@@ -1416,16 +1416,9 @@ namespace Private {
    */
   export const SUBMENU_OVERLAP = 3;
 
-  let transientWindowDataCache: IWindowData | null = null;
-  let transientCacheCounter: number = 0;
+  function getWindowData(element: HTMLElement): IWindowData {
 
-  function getWindowData(): IWindowData {
-    // if transient cache is in use, take one from it
-    if (transientCacheCounter > 0) {
-      transientCacheCounter--;
-      return transientWindowDataCache!;
-    }
-    return _getWindowData();
+    return _getWindowData(element);
   }
 
   /**
@@ -1438,16 +1431,14 @@ namespace Private {
    * Note: should be called before any DOM modifications.
    */
   export function saveWindowData(): void {
-    transientWindowDataCache = _getWindowData();
-    transientCacheCounter++;
   }
 
   /**
    * Create the DOM node for a menu.
    */
   export function createNode(): HTMLDivElement {
-    let node = this.node.ownerDocument.createElement('div');
-    let content = this.node.ownerDocument.createElement('ul');
+    let node = document.createElement('div');
+    let content = document.createElement('ul');
     content.className = 'lm-Menu-content';
     node.appendChild(content);
     content.setAttribute('role', 'menu');
@@ -1541,12 +1532,12 @@ namespace Private {
     return result;
   }
 
-  function _getWindowData(): IWindowData {
+  function _getWindowData(element: HTMLElement): IWindowData {
     return {
-      pageXOffset: window.pageXOffset,
-      pageYOffset: window.pageYOffset,
-      clientWidth: this.node.ownerDocument.documentElement.clientWidth,
-      clientHeight: this.node.ownerDocument.documentElement.clientHeight
+      pageXOffset: element.ownerDocument.defaultView?.window.scrollX || 0,
+      pageYOffset: element.ownerDocument.defaultView?.window.scrollY || 0,
+      clientWidth: element.ownerDocument.documentElement.clientWidth,
+      clientHeight: element.ownerDocument.documentElement.clientHeight
     };
   }
 
@@ -1563,7 +1554,7 @@ namespace Private {
     ref: HTMLElement | null
   ): void {
     // Get the current position and size of the main viewport.
-    const windowData = getWindowData();
+    const windowData = getWindowData(host || menu.node);
     let px = windowData.pageXOffset;
     let py = windowData.pageYOffset;
     let cw = windowData.clientWidth;
@@ -1578,6 +1569,8 @@ namespace Private {
     // Fetch common variables.
     let node = menu.node;
     let style = node.style;
+    style.top = '0';
+    style.left = '0';
 
     // Clear the menu geometry and prepare it for measuring.
     style.opacity = '0';
@@ -1615,7 +1608,7 @@ namespace Private {
    */
   export function openSubmenu(submenu: Menu, itemNode: HTMLElement): void {
     // Get the current position and size of the main viewport.
-    const windowData = getWindowData();
+    const windowData = getWindowData(itemNode);
     let px = windowData.pageXOffset;
     let py = windowData.pageYOffset;
     let cw = windowData.clientWidth;
@@ -1636,7 +1629,7 @@ namespace Private {
     style.maxHeight = `${maxHeight}px`;
 
     // Attach the menu to the document.
-    Widget.attach(submenu, this.node.ownerDocument.body);
+    Widget.attach(submenu, itemNode.ownerDocument.body);
 
     // Measure the size of the menu.
     let { width, height } = node.getBoundingClientRect();
@@ -1663,6 +1656,8 @@ namespace Private {
       y = itemRect.bottom + box.borderBottom + box.paddingBottom - height;
     }
 
+    style.top = '0';
+    style.left = '0';
     // Update the position of the menu to the computed position.
     style.transform = `translate(${Math.max(0, x)}px, ${Math.max(0, y)}px`;
 
