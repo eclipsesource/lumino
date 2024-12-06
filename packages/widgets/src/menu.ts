@@ -511,9 +511,9 @@ export class Menu extends Widget {
   }
 
   /**
-   * A message handler invoked on a `'before-attach'` message.
+   * A message handler invoked on a `'after-attach'` message.
    */
-  protected onAfterAttach(msg: Message): void {
+  protected override onAfterAttach(msg: Message): void {
     this.node.addEventListener('keydown', this);
     this.node.addEventListener('mouseup', this);
     this.node.addEventListener('mousemove', this);
@@ -526,14 +526,14 @@ export class Menu extends Widget {
   /**
    * A message handler invoked on an `'after-detach'` message.
    */
-  protected onAfterDetach(msg: Message): void {
+  protected override onAfterDetach(msg: Message): void {
     this.node.removeEventListener('keydown', this);
     this.node.removeEventListener('mouseup', this);
     this.node.removeEventListener('mousemove', this);
     this.node.removeEventListener('mouseenter', this);
     this.node.removeEventListener('mouseleave', this);
     this.node.removeEventListener('contextmenu', this);
-    document.removeEventListener('mousedown', this, true);
+    this.node.ownerDocument.removeEventListener('mousedown', this, true);
   }
 
   /**
