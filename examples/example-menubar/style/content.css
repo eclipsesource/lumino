@@ -28,3 +28,14 @@ textarea {
 #content {
   padding: 0 1rem;
 }
+
+#content button {
+  margin-right: 0.5rem;
+}
+
+.lm-example-context-area {
+  margin-top: 1rem;
+  padding: 2rem;
+  border: 1px dashed #888;
+  text-align: center;
+}
