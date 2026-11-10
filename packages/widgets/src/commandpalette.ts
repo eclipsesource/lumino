@@ -581,7 +581,7 @@ export class CommandPalette extends Widget {
    * Toggle the focused modifier based on the input node focus state.
    */
   private _toggleFocused(): void {
-    let focused = document.activeElement === this.inputNode;
+    let focused = this.node.ownerDocument.activeElement === this.inputNode;
     this.toggleClass('lm-mod-focused', focused);
   }
 

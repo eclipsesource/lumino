@@ -43,7 +43,7 @@ export class DockLayout extends Layout {
     if (options.spacing !== undefined) {
       this._spacing = Utils.clampDimension(options.spacing);
     }
-    this._document = options.document || document;
+    this._document = options.document || null;
     this._hiddenMode =
       options.hiddenMode !== undefined
         ? options.hiddenMode
@@ -338,7 +338,7 @@ export class DockLayout extends Layout {
             this._createTabBar(),
           createHandle: () => this._createHandle()
         },
-        this._document
+        this._document ?? undefined
       );
     } else {
       this._root = null;
@@ -1126,7 +1126,7 @@ export class DockLayout extends Layout {
    */
   private _createTabBar(): TabBar<Widget> {
     // Create the tab bar using the renderer.
-    let tabBar = this.renderer.createTabBar(this._document);
+    let tabBar = this.renderer.createTabBar(this._document ?? undefined);
 
     // Enforce necessary tab bar behavior.
     tabBar.orientation = 'horizontal';
@@ -1172,7 +1172,7 @@ export class DockLayout extends Layout {
   private _dirty = false;
   private _root: Private.LayoutNode | null = null;
   private _box: ElementExt.IBoxSizing | null = null;
-  private _document: Document | ShadowRoot;
+  private _document: Document | ShadowRoot | null;
   private _hiddenMode: Widget.HiddenMode;
   private _items: Private.ItemMap = new Map<Widget, LayoutItem>();
 }
@@ -1188,7 +1188,7 @@ export namespace DockLayout {
     /**
      * The document to use with the dock panel.
      *
-     * The default is the global `document` instance.
+     * The default is the document which owns the dock panel node.
      */
     document?: Document | ShadowRoot;
 
@@ -1538,7 +1538,7 @@ namespace Private {
   export function realizeAreaConfig(
     config: DockLayout.AreaConfig,
     renderer: DockLayout.IRenderer,
-    document: Document | ShadowRoot
+    document?: Document | ShadowRoot
   ): LayoutNode {
     let node: LayoutNode;
     if (config.type === 'tab-area') {
@@ -2255,7 +2255,7 @@ namespace Private {
   function realizeTabAreaConfig(
     config: DockLayout.ITabAreaConfig,
     renderer: DockLayout.IRenderer,
-    document: Document | ShadowRoot
+    document?: Document | ShadowRoot
   ): TabLayoutNode {
     // Create the tab bar for the layout node.
     let tabBar = renderer.createTabBar(document);
@@ -2280,7 +2280,7 @@ namespace Private {
   function realizeSplitAreaConfig(
     config: DockLayout.ISplitAreaConfig,
     renderer: DockLayout.IRenderer,
-    document: Document | ShadowRoot
+    document?: Document | ShadowRoot
   ): SplitLayoutNode {
     // Create the split layout node.
     let node = new SplitLayoutNode(config.orientation);

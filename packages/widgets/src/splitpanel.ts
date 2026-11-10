@@ -257,10 +257,11 @@ export class SplitPanel extends Panel {
     event.stopPropagation();
 
     // Add the extra document listeners.
-    document.addEventListener('pointerup', this, true);
-    document.addEventListener('pointermove', this, true);
-    document.addEventListener('keydown', this, true);
-    document.addEventListener('contextmenu', this, true);
+    const doc = this.node.ownerDocument;
+    doc.addEventListener('pointerup', this, true);
+    doc.addEventListener('pointermove', this, true);
+    doc.addEventListener('keydown', this, true);
+    doc.addEventListener('contextmenu', this, true);
 
     // Compute the offset delta for the handle press.
     let delta: number;
@@ -274,7 +275,7 @@ export class SplitPanel extends Panel {
 
     // Override the cursor and store the press data.
     let style = window.getComputedStyle(handle);
-    let override = Drag.overrideCursor(style.cursor!);
+    let override = Drag.overrideCursor(style.cursor!, doc);
     this._pressData = { index, delta, override };
   }
 
@@ -334,10 +335,11 @@ export class SplitPanel extends Panel {
     this._handleMoved.emit();
 
     // Remove the extra document listeners.
-    document.removeEventListener('keydown', this, true);
-    document.removeEventListener('pointerup', this, true);
-    document.removeEventListener('pointermove', this, true);
-    document.removeEventListener('contextmenu', this, true);
+    const doc = this.node.ownerDocument;
+    doc.removeEventListener('keydown', this, true);
+    doc.removeEventListener('pointerup', this, true);
+    doc.removeEventListener('pointermove', this, true);
+    doc.removeEventListener('contextmenu', this, true);
   }
 
   private _handleMoved = new Signal<any, void>(this);

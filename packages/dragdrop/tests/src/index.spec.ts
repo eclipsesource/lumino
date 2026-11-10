@@ -15,6 +15,38 @@ import { Drag } from '@lumino/dragdrop';
 
 import '@lumino/dragdrop/style/index.css';
 
+/**
+ * Describe a value without serializing it.
+ */
+function describeValue(value: unknown): string {
+  if (value === document) {
+    return 'the main document';
+  }
+  const node = value as Node | null;
+  if (node && node.nodeType === Node.DOCUMENT_NODE) {
+    return 'another document';
+  }
+  if (node && typeof node.nodeType === 'number') {
+    const where = node.ownerDocument === document ? 'the main' : 'another';
+    return `<${node.nodeName.toLowerCase()}> in ${where} document`;
+  }
+  return String(value);
+}
+
+/**
+ * Assert that two values are identical.
+ *
+ * Use instead of `expect(actual).to.equal(expected)` for values which may
+ * belong to another document. The test runner hangs when it serializes
+ * nodes of another window for a failed assertion.
+ */
+function expectSame(actual: unknown, expected: unknown): void {
+  expect(
+    actual === expected,
+    `expected ${describeValue(actual)} to be ${describeValue(expected)}`
+  ).to.equal(true);
+}
+
 class DropTarget {
   node = document.createElement('div');
 
@@ -642,6 +674,103 @@ describe('@lumino/dragdrop', () => {
 
         override.dispose();
         document.body.removeChild(wrapper);
+      });
+    });
+
+    context('in a secondary window', () => {
+      let iframe: HTMLIFrameElement;
+      let doc: Document;
+      let target: HTMLElement;
+      let events: string[];
+
+      const pointer = (type: string, node: EventTarget, x = 20, y = 20) => {
+        const event = new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: y
+        });
+        node.dispatchEvent(event);
+        return event;
+      };
+
+      beforeEach(() => {
+        iframe = document.createElement('iframe');
+        document.body.appendChild(iframe);
+        doc = iframe.contentDocument!;
+        doc.open();
+        doc.write('<!DOCTYPE html><html><head></head><body></body></html>');
+        doc.close();
+        doc.body.style.margin = '0';
+        target = doc.createElement('div');
+        target.style.width = '100px';
+        target.style.height = '100px';
+        doc.body.appendChild(target);
+        events = [];
+        for (const type of ['lm-dragenter', 'lm-dragover', 'lm-drop']) {
+          target.addEventListener(type, (event: Event) => {
+            events.push(type);
+            const dragEvent = event as Drag.Event;
+            dragEvent.preventDefault();
+            dragEvent.dropAction = dragEvent.proposedAction;
+          });
+        }
+      });
+
+      afterEach(() => {
+        iframe.remove();
+      });
+
+      it('should drag and drop within the given document', async () => {
+        const dragImage = document.createElement('div');
+        const drag = new Drag({
+          document: doc,
+          mimeData: new MimeData(),
+          dragImage
+        });
+        const result = drag.start(20, 20);
+        expectSame(dragImage.parentNode, doc.body);
+        expect(events).to.contain('lm-dragenter');
+        expect(pointer('pointermove', target).defaultPrevented).to.equal(true);
+        expect(events).to.contain('lm-dragenter');
+        expect(events).to.contain('lm-dragover');
+        const backdrop = doc.querySelector('.lm-cursor-backdrop');
+        expect(backdrop).to.not.equal(null);
+        pointer('pointerup', target);
+        expect(await result).to.equal('copy');
+        expect(events).to.contain('lm-drop');
+        expect(dragImage.isConnected).to.equal(false);
+        expect(backdrop!.isConnected).to.equal(false);
+      });
+
+      it('should not listen on the main document', () => {
+        const drag = new Drag({ document: doc, mimeData: new MimeData() });
+        drag.start(20, 20);
+        expect(pointer('pointermove', document.body).defaultPrevented).to.equal(
+          false
+        );
+        drag.dispose();
+      });
+
+      it('should remove the listeners when disposed', () => {
+        const drag = new Drag({ document: doc, mimeData: new MimeData() });
+        drag.start(20, 20);
+        drag.dispose();
+        expect(pointer('pointermove', target).defaultPrevented).to.equal(false);
+      });
+
+      it('should override the cursor in the given document', () => {
+        const override = Drag.overrideCursor('wait', doc);
+        const backdrop = doc.querySelector(
+          '.lm-cursor-backdrop'
+        ) as HTMLElement;
+        expect(backdrop.style.cursor).to.equal('wait');
+        expectSame(document.querySelector('.lm-cursor-backdrop'), null);
+        pointer('pointermove', doc, 30, 40);
+        expect(backdrop.style.transform).to.equal('translate(30px, 40px)');
+        override.dispose();
+        expect(backdrop.isConnected).to.equal(false);
+        expectSame(doc.querySelector('.lm-cursor-backdrop'), null);
       });
     });
   });

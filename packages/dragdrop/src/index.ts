@@ -190,7 +190,7 @@ export class Drag implements IDisposable {
       clientX,
       clientY
     });
-    document.dispatchEvent(event);
+    Private.ownerDocument(this.document).dispatchEvent(event);
 
     // Return the pending promise for the drag operation.
     return this._promise;
@@ -313,34 +313,36 @@ export class Drag implements IDisposable {
    * Add the document event listeners for the drag object.
    */
   private _addListeners(): void {
-    document.addEventListener('pointerdown', this, true);
-    document.addEventListener('pointermove', this, true);
-    document.addEventListener('pointerup', this, true);
-    document.addEventListener('pointerenter', this, true);
-    document.addEventListener('pointerleave', this, true);
-    document.addEventListener('pointerover', this, true);
-    document.addEventListener('pointerout', this, true);
-    document.addEventListener('keydown', this, true);
-    document.addEventListener('keyup', this, true);
-    document.addEventListener('keypress', this, true);
-    document.addEventListener('contextmenu', this, true);
+    const doc = Private.ownerDocument(this.document);
+    doc.addEventListener('pointerdown', this, true);
+    doc.addEventListener('pointermove', this, true);
+    doc.addEventListener('pointerup', this, true);
+    doc.addEventListener('pointerenter', this, true);
+    doc.addEventListener('pointerleave', this, true);
+    doc.addEventListener('pointerover', this, true);
+    doc.addEventListener('pointerout', this, true);
+    doc.addEventListener('keydown', this, true);
+    doc.addEventListener('keyup', this, true);
+    doc.addEventListener('keypress', this, true);
+    doc.addEventListener('contextmenu', this, true);
   }
 
   /**
    * Remove the document event listeners for the drag object.
    */
   private _removeListeners(): void {
-    document.removeEventListener('pointerdown', this, true);
-    document.removeEventListener('pointermove', this, true);
-    document.removeEventListener('pointerup', this, true);
-    document.removeEventListener('pointerenter', this, true);
-    document.removeEventListener('pointerleave', this, true);
-    document.removeEventListener('pointerover', this, true);
-    document.removeEventListener('pointerout', this, true);
-    document.removeEventListener('keydown', this, true);
-    document.removeEventListener('keyup', this, true);
-    document.removeEventListener('keypress', this, true);
-    document.removeEventListener('contextmenu', this, true);
+    const doc = Private.ownerDocument(this.document);
+    doc.removeEventListener('pointerdown', this, true);
+    doc.removeEventListener('pointermove', this, true);
+    doc.removeEventListener('pointerup', this, true);
+    doc.removeEventListener('pointerenter', this, true);
+    doc.removeEventListener('pointerleave', this, true);
+    doc.removeEventListener('pointerover', this, true);
+    doc.removeEventListener('pointerout', this, true);
+    doc.removeEventListener('keydown', this, true);
+    doc.removeEventListener('keyup', this, true);
+    doc.removeEventListener('keypress', this, true);
+    doc.removeEventListener('contextmenu', this, true);
   }
 
   /**
@@ -348,7 +350,7 @@ export class Drag implements IDisposable {
    */
   private _updateDragScroll(event: PointerEvent): void {
     // Find the scroll target under the mouse.
-    let target = Private.findScrollTarget(event);
+    let target = Private.findScrollTarget(event, this.document);
 
     // Bail if there is nothing to scroll.
     if (!this._scrollTarget && !target) {
@@ -419,11 +421,7 @@ export class Drag implements IDisposable {
     style.pointerEvents = 'none';
     style.position = 'fixed';
     style.transform = `translate(${clientX}px, ${clientY}px)`;
-    const body =
-      this.document instanceof Document
-        ? this.document.body
-        : (this.document.firstElementChild as HTMLElement);
-    body.appendChild(this.dragImage);
+    Private.bodyOf(this.document).appendChild(this.dragImage);
   }
 
   /**
@@ -579,6 +577,10 @@ export namespace Drag {
   export interface IOptions {
     /**
      * The root element for dragging DOM artifacts (defaults to document).
+     *
+     * Event listeners are installed on the document which owns the root.
+     * Pass the document of another window, for example a secondary window,
+     * to drag within that window.
      */
     document?: Document | ShadowRoot;
 
@@ -842,7 +844,7 @@ namespace Private {
    */
   export function findElementBehindBackdrop(
     event?: PointerEvent,
-    root: Document | ShadowRoot = document
+    root: Document | ShadowRoot = cursorBackdrop.ownerDocument
   ) {
     if (event) {
       // Check if we already cached element for this event.
@@ -886,13 +888,17 @@ namespace Private {
   /**
    * Find the drag scroll target under the mouse, if any.
    */
-  export function findScrollTarget(event: PointerEvent): IScrollTarget | null {
+  export function findScrollTarget(
+    event: PointerEvent,
+    root: Document | ShadowRoot = document
+  ): IScrollTarget | null {
     // Look up the client mouse position.
     let x = event.clientX;
     let y = event.clientY;
 
     // Get the element under the mouse.
-    let element: Element | null = findElementBehindBackdrop(event);
+    let element: Element | null = findElementBehindBackdrop(event, root);
+    const doc = ownerDocument(root);
 
     // Search for a scrollable target based on the mouse position.
     // The null assert in third clause of for-loop is required due to:
@@ -906,9 +912,10 @@ namespace Private {
       // Set up the coordinate offsets for the element.
       let offsetX = 0;
       let offsetY = 0;
-      if (element === document.body) {
-        offsetX = window.pageXOffset;
-        offsetY = window.pageYOffset;
+      if (element === doc.body) {
+        const view = doc.defaultView ?? window;
+        offsetX = view.pageXOffset;
+        offsetY = view.pageYOffset;
       }
 
       // Get the element bounds in viewport coordinates.
@@ -1039,10 +1046,7 @@ namespace Private {
     }
 
     // If the current element is the document body, keep the original target.
-    const body =
-      drag.document instanceof Document
-        ? drag.document.body
-        : (drag.document.firstElementChild as HTMLElement);
+    const body = bodyOf(drag.document);
 
     if (currElem === body) {
       return currTarget;
@@ -1245,6 +1249,32 @@ namespace Private {
   };
 
   /**
+   * The document the cursor backdrop listens on while it is attached.
+   */
+  let backdropDocument: Document | null = null;
+
+  /**
+   * Get the document which owns a document or shadow root.
+   *
+   * Does not use `instanceof` as documents of other windows, for example
+   * secondary windows, have a different `Document` constructor.
+   */
+  export function ownerDocument(root: Document | ShadowRoot): Document {
+    return root.nodeType === Node.DOCUMENT_NODE
+      ? (root as Document)
+      : root.ownerDocument!;
+  }
+
+  /**
+   * Get the element hosting drag images and the cursor backdrop.
+   */
+  export function bodyOf(root: Document | ShadowRoot): HTMLElement {
+    return root.nodeType === Node.DOCUMENT_NODE
+      ? (root as Document).body
+      : (root.firstElementChild as HTMLElement);
+  }
+
+  /**
    * Implementation of `Drag.overrideCursor`.
    */
   export function overrideCursor(
@@ -1252,17 +1282,14 @@ namespace Private {
     doc: Document | ShadowRoot = document
   ): IDisposable {
     let id = ++overrideCursorID;
-    const body =
-      doc instanceof Document
-        ? doc.body
-        : (doc.firstElementChild as HTMLElement);
     if (!cursorBackdrop.isConnected) {
       // Hide the backdrop until the pointer moves to avoid issues with
       // native double click detection, used in e.g. datagrid editing.
       cursorBackdrop.style.transform = 'scale(0)';
-      body.appendChild(cursorBackdrop);
+      bodyOf(doc).appendChild(cursorBackdrop);
       resetBackdropScroll();
-      document.addEventListener('pointermove', alignBackdrop, {
+      backdropDocument = ownerDocument(doc);
+      backdropDocument.addEventListener('pointermove', alignBackdrop, {
         capture: true,
         passive: true
       });
@@ -1274,7 +1301,12 @@ namespace Private {
     cursorBackdrop.style.cursor = cursor;
     return new DisposableDelegate(() => {
       if (id === overrideCursorID && cursorBackdrop.isConnected) {
-        document.removeEventListener('pointermove', alignBackdrop, true);
+        backdropDocument?.removeEventListener(
+          'pointermove',
+          alignBackdrop,
+          true
+        );
+        backdropDocument = null;
         cursorBackdrop.removeEventListener(
           'scroll',
           propagateBackdropScroll,
@@ -1282,7 +1314,7 @@ namespace Private {
         );
 
         // Removing the element from the DOM also releases the pointer capture.
-        body.removeChild(cursorBackdrop);
+        cursorBackdrop.remove();
       }
     });
   }

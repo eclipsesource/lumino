@@ -1,5 +1,7 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
+import { expect } from 'chai';
+
 import { Message } from '@lumino/messaging';
 
 import { Widget } from '@lumino/widgets';
@@ -91,4 +93,36 @@ export function createSecondaryDocument(
     resize,
     dispose: () => iframe.remove()
   };
+}
+
+/**
+ * Describe a value without serializing it.
+ */
+function describeValue(value: unknown): string {
+  if (value === document) {
+    return 'the main document';
+  }
+  const node = value as Node | null;
+  if (node && node.nodeType === Node.DOCUMENT_NODE) {
+    return 'another document';
+  }
+  if (node && typeof node.nodeType === 'number') {
+    const where = node.ownerDocument === document ? 'the main' : 'another';
+    return `<${node.nodeName.toLowerCase()}> in ${where} document`;
+  }
+  return String(value);
+}
+
+/**
+ * Assert that two values are identical.
+ *
+ * Use instead of `expect(actual).to.equal(expected)` for values which may
+ * belong to another document. The test runner hangs when it serializes
+ * nodes of another window for a failed assertion.
+ */
+export function expectSame(actual: unknown, expected: unknown): void {
+  expect(
+    actual === expected,
+    `expected ${describeValue(actual)} to be ${describeValue(expected)}`
+  ).to.equal(true);
 }

@@ -384,7 +384,8 @@ export class ScrollBar extends Widget {
     event.stopPropagation();
 
     // Override the mouse cursor.
-    let override = Drag.overrideCursor('default');
+    const doc = this.node.ownerDocument;
+    let override = Drag.overrideCursor('default', doc);
 
     // Set up the press data.
     this._pressData = {
@@ -397,10 +398,10 @@ export class ScrollBar extends Widget {
     };
 
     // Add the extra event listeners.
-    document.addEventListener('mousemove', this, true);
-    document.addEventListener('mouseup', this, true);
-    document.addEventListener('keydown', this, true);
-    document.addEventListener('contextmenu', this, true);
+    doc.addEventListener('mousemove', this, true);
+    doc.addEventListener('mouseup', this, true);
+    doc.addEventListener('keydown', this, true);
+    doc.addEventListener('contextmenu', this, true);
 
     // Handle a thumb press.
     if (part === 'thumb') {
@@ -560,10 +561,11 @@ export class ScrollBar extends Widget {
     this._pressData = null;
 
     // Remove the extra event listeners.
-    document.removeEventListener('mousemove', this, true);
-    document.removeEventListener('mouseup', this, true);
-    document.removeEventListener('keydown', this, true);
-    document.removeEventListener('contextmenu', this, true);
+    const doc = this.node.ownerDocument;
+    doc.removeEventListener('mousemove', this, true);
+    doc.removeEventListener('mouseup', this, true);
+    doc.removeEventListener('keydown', this, true);
+    doc.removeEventListener('contextmenu', this, true);
 
     // Remove the active classes from the nodes.
     this.thumbNode.classList.remove('lm-mod-active');

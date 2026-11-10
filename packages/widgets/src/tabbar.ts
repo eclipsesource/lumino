@@ -63,7 +63,7 @@ export class TabBar<T> extends Widget {
     this.addClass('lm-TabBar');
     this.contentNode.setAttribute('role', 'tablist');
     this.setFlag(Widget.Flag.DisallowLayout);
-    this._document = options.document || document;
+    this._document = options.document || null;
     this.tabsMovable = options.tabsMovable || false;
     this.titlesEditable = options.titlesEditable || false;
     this.allowDeselect = options.allowDeselect || false;
@@ -169,10 +169,10 @@ export class TabBar<T> extends Widget {
   /**
    * The document to use with the tab bar.
    *
-   * The default is the global `document` instance.
+   * The default is the document which owns the tab bar node.
    */
   get document(): Document | ShadowRoot {
-    return this._document;
+    return this._document ?? this.node.ownerDocument;
   }
 
   /**
@@ -836,7 +836,7 @@ export class TabBar<T> extends Widget {
       event.key === ' '
     ) {
       // Get focus element that is in focus by the tab key
-      const focusedElement = document.activeElement;
+      const focusedElement = this.node.ownerDocument.activeElement;
 
       // Test first if the focus is on the add button node
       if (
@@ -871,7 +871,9 @@ export class TabBar<T> extends Widget {
       event.stopPropagation();
 
       // Get the current focused element.
-      let focusedIndex = focusable.indexOf(document.activeElement as Element);
+      let focusedIndex = focusable.indexOf(
+        this.node.ownerDocument.activeElement as Element
+      );
       if (focusedIndex === -1) {
         focusedIndex = this._currentIndex;
       }
@@ -1056,7 +1058,7 @@ export class TabBar<T> extends Widget {
       };
       data.tabLayout = Private.snapTabLayout(tabs, this._orientation);
       data.contentRect = this.contentNode.getBoundingClientRect();
-      data.override = Drag.overrideCursor('default');
+      data.override = Drag.overrideCursor('default', this.document);
 
       // Add the dragging style classes.
       data.tab.classList.add('lm-mod-dragging');
@@ -1563,7 +1565,7 @@ export class TabBar<T> extends Widget {
   private _currentIndex = -1;
   private _titles: Title<T>[] = [];
   private _orientation: TabBar.Orientation;
-  private _document: Document | ShadowRoot;
+  private _document: Document | ShadowRoot | null;
   private _titlesEditable: boolean = false;
   private _previousTitle: Title<T> | null = null;
   private _dragData: Private.IDragData | null = null;
@@ -1666,7 +1668,7 @@ export namespace TabBar {
     /**
      * The document to use with the tab bar.
      *
-     * The default is the global `document` instance.
+     * The default is the document which owns the tab bar node.
      */
 
     document?: Document | ShadowRoot;

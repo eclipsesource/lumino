@@ -18,6 +18,7 @@ import { Layout, Panel, Title, Widget } from '@lumino/widgets';
 import {
   createSecondaryDocument,
   DocumentWidget,
+  expectSame,
   ISecondaryDocument
 } from './secondarydocument';
 
@@ -1242,9 +1243,9 @@ describe('@lumino/widgets', () => {
         it('should adopt the node before `before-attach`', () => {
           let widget = new DocumentWidget();
           Widget.attach(widget, secondary.document.body);
-          expect(widget.beforeAttachDocument).to.equal(secondary.document);
-          expect(widget.node.ownerDocument).to.equal(secondary.document);
-          expect(widget.node.parentNode).to.equal(secondary.document.body);
+          expectSame(widget.beforeAttachDocument, secondary.document);
+          expectSame(widget.node.ownerDocument, secondary.document);
+          expectSame(widget.node.parentNode, secondary.document.body);
           widget.dispose();
         });
 
@@ -1253,8 +1254,8 @@ describe('@lumino/widgets', () => {
           Widget.attach(widget, secondary.document.body);
           Widget.detach(widget);
           Widget.attach(widget, document.body);
-          expect(widget.beforeAttachDocument).to.equal(document);
-          expect(widget.node.ownerDocument).to.equal(document);
+          expectSame(widget.beforeAttachDocument, document);
+          expectSame(widget.node.ownerDocument, document);
           widget.dispose();
         });
 
@@ -1263,7 +1264,7 @@ describe('@lumino/widgets', () => {
           let child = new DocumentWidget();
           parent.addWidget(child);
           Widget.attach(parent, secondary.document.body);
-          expect(child.beforeAttachDocument).to.equal(secondary.document);
+          expectSame(child.beforeAttachDocument, secondary.document);
           parent.dispose();
         });
       });

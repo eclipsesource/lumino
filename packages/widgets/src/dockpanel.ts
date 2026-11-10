@@ -45,7 +45,7 @@ export class DockPanel extends Widget {
   constructor(options: DockPanel.IOptions = {}) {
     super();
     this.addClass('lm-DockPanel');
-    this._document = options.document || document;
+    this._document = options.document || null;
     this._mode = options.mode || 'multiple-document';
     this._renderer = options.renderer || DockPanel.defaultRenderer;
     this._edges = options.edges || Private.DEFAULT_EDGES;
@@ -70,7 +70,7 @@ export class DockPanel extends Widget {
 
     // Set up the dock layout for the panel.
     this.layout = new DockLayout({
-      document: this._document,
+      document: this._document ?? undefined,
       renderer,
       spacing: options.spacing,
       hiddenMode: options.hiddenMode
@@ -716,10 +716,11 @@ export class DockPanel extends Widget {
     event.stopPropagation();
 
     // Add the extra document listeners.
-    this._document.addEventListener('keydown', this, true);
-    this._document.addEventListener('pointerup', this, true);
-    this._document.addEventListener('pointermove', this, true);
-    this._document.addEventListener('contextmenu', this, true);
+    const doc = this._getDocument();
+    doc.addEventListener('keydown', this, true);
+    doc.addEventListener('pointerup', this, true);
+    doc.addEventListener('pointermove', this, true);
+    doc.addEventListener('contextmenu', this, true);
 
     // Compute the offset deltas for the handle press.
     let rect = handle.getBoundingClientRect();
@@ -728,7 +729,7 @@ export class DockPanel extends Widget {
 
     // Override the cursor and store the press data.
     let style = window.getComputedStyle(handle);
-    let override = Drag.overrideCursor(style.cursor!, this._document);
+    let override = Drag.overrideCursor(style.cursor!, doc);
     this._pressData = { handle, deltaX, deltaY, override };
   }
 
@@ -789,10 +790,20 @@ export class DockPanel extends Widget {
     this._pressData = null;
 
     // Remove the extra document listeners.
-    this._document.removeEventListener('keydown', this, true);
-    this._document.removeEventListener('pointerup', this, true);
-    this._document.removeEventListener('pointermove', this, true);
-    this._document.removeEventListener('contextmenu', this, true);
+    const doc = this._getDocument();
+    doc.removeEventListener('keydown', this, true);
+    doc.removeEventListener('pointerup', this, true);
+    doc.removeEventListener('pointermove', this, true);
+    doc.removeEventListener('contextmenu', this, true);
+  }
+
+  /**
+   * Get the document for event listeners and drag operations.
+   *
+   * Defaults to the document which owns the dock panel node.
+   */
+  private _getDocument(): Document | ShadowRoot {
+    return this._document ?? this.node.ownerDocument;
   }
 
   /**
@@ -912,7 +923,7 @@ export class DockPanel extends Widget {
    */
   private _createTabBar(): TabBar<Widget> {
     // Create the tab bar.
-    let tabBar = this._renderer.createTabBar(this._document);
+    let tabBar = this._renderer.createTabBar(this._document ?? undefined);
 
     // Set the generated tab bar property for the tab bar.
     Private.isGeneratedTabBarProperty.set(tabBar, true);
@@ -1044,7 +1055,7 @@ export class DockPanel extends Widget {
 
     // Create the drag object to manage the drag-drop operation.
     this._drag = new Drag({
-      document: this._document,
+      document: this._getDocument(),
       mimeData,
       dragImage,
       proposedAction: 'move',
@@ -1064,7 +1075,7 @@ export class DockPanel extends Widget {
   }
 
   private _edges: DockPanel.IEdges;
-  private _document: Document | ShadowRoot;
+  private _document: Document | ShadowRoot | null;
   private _mode: DockPanel.Mode;
   private _drag: Drag | null = null;
   private _renderer: DockPanel.IRenderer;
@@ -1088,7 +1099,7 @@ export namespace DockPanel {
     /**
      * The document to use with the dock panel.
      *
-     * The default is the global `document` instance.
+     * The default is the document which owns the dock panel node.
      */
 
     document?: Document | ShadowRoot;

@@ -9,22 +9,28 @@ import { MessageLoop } from '@lumino/messaging';
 import {
   AccordionPanel,
   BoxPanel,
+  CommandPalette,
   ContextMenu,
   DockPanel,
+  FocusTracker,
   GridLayout,
   Menu,
   MenuBar,
   Panel,
+  ScrollBar,
   SingletonLayout,
   SplitPanel,
   StackedPanel,
+  TabBar,
   TabPanel,
+  Title,
   Widget
 } from '@lumino/widgets';
 
 import {
   createSecondaryDocument,
   DocumentWidget,
+  expectSame,
   ISecondaryDocument
 } from './secondarydocument';
 
@@ -68,6 +74,20 @@ function pointerDown(target: EventTarget, clientX: number, clientY: number) {
       clientY
     })
   );
+}
+
+function dispatch(
+  target: EventTarget,
+  type: string,
+  clientX: number,
+  clientY: number
+): boolean {
+  const init = { bubbles, cancelable: true, clientX, clientY, button: 0 };
+  const event = type.startsWith('pointer')
+    ? new PointerEvent(type, init)
+    : new MouseEvent(type, init);
+  target.dispatchEvent(event);
+  return event.defaultPrevented;
 }
 
 function keyDown(target: EventTarget, keyCode: number) {
@@ -221,11 +241,141 @@ describe('@lumino/widgets', () => {
           Widget.attach(parent, secondary.document.body);
           const child = new DocumentWidget();
           add(child);
-          expect(child.beforeAttachDocument).to.equal(secondary.document);
-          expect(child.node.ownerDocument).to.equal(secondary.document);
+          expectSame(child.beforeAttachDocument, secondary.document);
+          expectSame(child.node.ownerDocument, secondary.document);
           expect(child.isAttached).to.equal(true);
         });
       }
+    });
+
+    describe('drag handling', () => {
+      /**
+       * Size a widget and attach it to the secondary document.
+       */
+      function attachSized<T extends Widget>(widget: T): T {
+        track(widget);
+        widget.node.style.position = 'absolute';
+        widget.node.style.width = `${WIDTH}px`;
+        widget.node.style.height = `${HEIGHT}px`;
+        Widget.attach(widget, secondary.document.body);
+        MessageLoop.sendMessage(widget, Widget.ResizeMessage.UnknownSize);
+        return widget;
+      }
+
+      function backdrop(doc: Document): Element | null {
+        return doc.querySelector('.lm-cursor-backdrop');
+      }
+
+      it('should drag SplitPanel handles in the panel document', () => {
+        const panel = attachSized(new SplitPanel());
+        panel.addWidget(new Widget());
+        panel.addWidget(new Widget());
+        MessageLoop.sendMessage(panel, Widget.ResizeMessage.UnknownSize);
+        let moved = false;
+        panel.handleMoved.connect(() => (moved = true));
+        const { x, y } = center(panel.handles[0]);
+
+        dispatch(panel.handles[0], 'pointerdown', x, y);
+        expect(backdrop(secondary.document)).to.not.equal(null);
+        expectSame(backdrop(document), null);
+        expect(dispatch(document.body, 'pointermove', x, y)).to.equal(false);
+        expect(dispatch(secondary.document, 'pointermove', x + 10, y)).to.equal(
+          true
+        );
+        dispatch(secondary.document, 'pointerup', x + 10, y);
+        expect(moved).to.equal(true);
+        expectSame(backdrop(secondary.document), null);
+      });
+
+      it('should drag DockPanel handles in the panel document', () => {
+        const dock = attachSized(new DockPanel());
+        const first = new Widget();
+        dock.addWidget(first);
+        dock.addWidget(new Widget(), { mode: 'split-right', ref: first });
+        MessageLoop.sendMessage(dock, Widget.ResizeMessage.UnknownSize);
+        const handle = Array.from(dock.handles()).find(
+          node => !node.classList.contains('lm-mod-hidden')
+        )!;
+        const { x, y } = center(handle);
+
+        dispatch(handle, 'pointerdown', x, y);
+        expect(backdrop(secondary.document)).to.not.equal(null);
+        expect(dispatch(document.body, 'pointermove', x, y)).to.equal(false);
+        expect(dispatch(secondary.document, 'pointermove', x + 10, y)).to.equal(
+          true
+        );
+        dispatch(secondary.document, 'pointerup', x + 10, y);
+        expectSame(backdrop(secondary.document), null);
+      });
+
+      it('should create DockPanel tab bars for the panel document', () => {
+        const dock = attachSized(new DockPanel());
+        dock.addWidget(new Widget());
+        for (const tabBar of dock.tabBars()) {
+          expectSame(tabBar.document, secondary.document);
+        }
+      });
+
+      it('should drag tabs in the tab bar document', () => {
+        const bar = attachSized(new TabBar<Widget>({ tabsMovable: true }));
+        bar.addTab(new Title({ owner: new Widget(), label: 'One' }));
+        bar.addTab(new Title({ owner: new Widget(), label: 'Two' }));
+        MessageLoop.sendMessage(bar, Widget.Msg.UpdateRequest);
+        expectSame(bar.document, secondary.document);
+        const tab = bar.contentNode.children[0];
+        const { x, y } = center(tab);
+
+        dispatch(tab, 'pointerdown', x, y);
+        expect(dispatch(document.body, 'pointermove', x + 20, y)).to.equal(
+          false
+        );
+        dispatch(secondary.document, 'pointermove', x + 20, y);
+        expect(bar.hasClass('lm-mod-dragging')).to.equal(true);
+        expect(backdrop(secondary.document)).to.not.equal(null);
+        expectSame(backdrop(document), null);
+        dispatch(secondary.document, 'pointerup', x + 20, y);
+      });
+
+      it('should keep an explicit tab bar document', () => {
+        const bar = attachSized(new TabBar<Widget>({ document }));
+        expectSame(bar.document, document);
+      });
+
+      it('should drag the ScrollBar thumb in the scroll bar document', () => {
+        const bar = attachSized(new ScrollBar({ maximum: 100, page: 10 }));
+        MessageLoop.sendMessage(bar, Widget.Msg.UpdateRequest);
+        const { x, y } = center(bar.thumbNode);
+
+        dispatch(bar.thumbNode, 'mousedown', x, y);
+        expect(backdrop(secondary.document)).to.not.equal(null);
+        expect(dispatch(document.body, 'mousemove', x, y + 10)).to.equal(false);
+        expect(dispatch(secondary.document, 'mousemove', x, y + 10)).to.equal(
+          true
+        );
+        dispatch(secondary.document, 'mouseup', x, y + 10);
+        expectSame(backdrop(secondary.document), null);
+      });
+    });
+
+    describe('focus handling', () => {
+      it('should detect focus of widgets added to a FocusTracker', () => {
+        const widget = track(new Widget());
+        const input = document.createElement('input');
+        widget.node.appendChild(input);
+        Widget.attach(widget, secondary.document.body);
+        input.focus();
+        const tracker = new FocusTracker<Widget>();
+        tracker.add(widget);
+        expectSame(tracker.currentWidget, widget);
+        tracker.dispose();
+      });
+
+      it('should mark a focused CommandPalette input', () => {
+        const palette = track(new CommandPalette({ commands }));
+        Widget.attach(palette, secondary.document.body);
+        palette.inputNode.focus();
+        expect(palette.hasClass('lm-mod-focused')).to.equal(true);
+      });
     });
 
     describe('Menu', () => {
@@ -233,8 +383,8 @@ describe('@lumino/widgets', () => {
         const menu = createMenu();
         menu.open(10, 10, { host: secondary.document.body });
         expect(menu.isAttached).to.equal(true);
-        expect(menu.node.ownerDocument).to.equal(secondary.document);
-        expect(menu.node.parentNode).to.equal(secondary.document.body);
+        expectSame(menu.node.ownerDocument, secondary.document);
+        expectSame(menu.node.parentNode, secondary.document.body);
       });
 
       it('should close on pointerdown outside the menu in the host document', () => {
@@ -292,9 +442,9 @@ describe('@lumino/widgets', () => {
         menu.open(10, 10, { host: secondary.document.body });
         menu.activeIndex = menu.items.length - 1;
         menu.triggerActiveItem();
-        expect(menu.childMenu).to.equal(submenu);
-        expect(submenu.node.ownerDocument).to.equal(secondary.document);
-        expect(submenu.node.parentNode).to.equal(secondary.document.body);
+        expectSame(menu.childMenu, submenu);
+        expectSame(submenu.node.ownerDocument, secondary.document);
+        expectSame(submenu.node.parentNode, secondary.document.body);
       });
 
       it('should not measure the main document', () => {
@@ -338,8 +488,8 @@ describe('@lumino/widgets', () => {
         menu.open(10, 10, { host: secondary.document.body });
         menu.close();
         menu.open(10, 10);
-        expect(menu.node.ownerDocument).to.equal(document);
-        expect(menu.node.parentNode).to.equal(document.body);
+        expectSame(menu.node.ownerDocument, document);
+        expectSame(menu.node.parentNode, document.body);
         pointerDown(secondary.document.body, WIDTH - 5, HEIGHT - 5);
         expect(menu.isAttached).to.equal(true);
         pointerDown(document.body, -10, -10);
@@ -382,8 +532,8 @@ describe('@lumino/widgets', () => {
         bar.activeIndex = 0;
         bar.openActiveMenu();
         expect(menu.isAttached).to.equal(true);
-        expect(menu.node.ownerDocument).to.equal(secondary.document);
-        expect(menu.node.parentNode).to.equal(secondary.document.body);
+        expectSame(menu.node.ownerDocument, secondary.document);
+        expectSame(menu.node.parentNode, secondary.document.body);
       });
 
       it('should not measure the main document', () => {
@@ -408,7 +558,7 @@ describe('@lumino/widgets', () => {
         Widget.attach(hostedBar, secondary.document.body);
         hostedBar.activeIndex = 0;
         hostedBar.openActiveMenu();
-        expect(hostedMenu.node.parentNode).to.equal(host);
+        expectSame(hostedMenu.node.parentNode, host);
       });
 
       it('should toggle the menu on pointerdown on the menu bar item', () => {
@@ -425,7 +575,7 @@ describe('@lumino/widgets', () => {
         bar.openActiveMenu();
         pointerDown(secondary.document.body, WIDTH - 5, HEIGHT - 5);
         expect(menu.isAttached).to.equal(false);
-        expect(bar.childMenu).to.equal(null);
+        expectSame(bar.childMenu, null);
       });
 
       it('should remove the menu bar document listener on close', () => {
@@ -469,8 +619,8 @@ describe('@lumino/widgets', () => {
         } as any);
         expect(opened).to.equal(true);
         const node = contextMenuWidget.menu.node;
-        expect(node.ownerDocument).to.equal(secondary.document);
-        expect(node.parentNode).to.equal(secondary.document.body);
+        expectSame(node.ownerDocument, secondary.document);
+        expectSame(node.parentNode, secondary.document.body);
       });
 
       it('should not measure the main document', () => {
@@ -524,13 +674,13 @@ describe('@lumino/widgets', () => {
         const item = bar.contentNode.children[0];
         const { x, y } = center(item);
         pointerDown(item, x, y);
-        expect(file.node.parentNode).to.equal(secondary.document.body);
+        expectSame(file.node.parentNode, secondary.document.body);
 
         // Navigate into the submenu with the keyboard.
         keyDown(file.node, 40); // Down arrow
         keyDown(file.node, 40); // Down arrow
         keyDown(file.node, 39); // Right arrow
-        expect(recent.node.parentNode).to.equal(secondary.document.body);
+        expectSame(recent.node.parentNode, secondary.document.body);
         const rect = recent.node.getBoundingClientRect();
         expect(rect.right).to.be.at.most(WIDTH + EPSILON);
 
@@ -539,7 +689,7 @@ describe('@lumino/widgets', () => {
         expect(executed).to.deep.equal(['recent']);
         expect(file.isAttached).to.equal(false);
         expect(recent.isAttached).to.equal(false);
-        expect(bar.childMenu).to.equal(null);
+        expectSame(bar.childMenu, null);
 
         // Interacting with the document afterwards is a no-op.
         pointerDown(secondary.document.body, WIDTH - 5, HEIGHT - 5);
@@ -572,7 +722,7 @@ describe('@lumino/widgets', () => {
         try {
           // Open in the secondary document and trigger an item.
           contextMenu(secondaryTarget, 10, 10);
-          expect(menu.node.parentNode).to.equal(secondary.document.body);
+          expectSame(menu.node.parentNode, secondary.document.body);
           keyDown(menu.node, 40); // Down arrow
           keyDown(menu.node, 13); // Enter
           expect(executed).to.deep.equal(['context']);
@@ -580,7 +730,7 @@ describe('@lumino/widgets', () => {
 
           // Open in the main document and dismiss it.
           contextMenu(mainTarget, 10, 10);
-          expect(menu.node.parentNode).to.equal(document.body);
+          expectSame(menu.node.parentNode, document.body);
           pointerDown(secondary.document.body, WIDTH - 5, HEIGHT - 5);
           expect(menu.isAttached).to.equal(true);
           pointerDown(document.body, -10, -10);
@@ -588,7 +738,7 @@ describe('@lumino/widgets', () => {
 
           // Open in the secondary document again and dismiss it.
           contextMenu(secondaryTarget, 10, 10);
-          expect(menu.node.parentNode).to.equal(secondary.document.body);
+          expectSame(menu.node.parentNode, secondary.document.body);
           pointerDown(secondary.document.body, WIDTH - 5, HEIGHT - 5);
           expect(menu.isAttached).to.equal(false);
         } finally {

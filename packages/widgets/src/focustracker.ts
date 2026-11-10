@@ -165,7 +165,7 @@ export class FocusTracker<T extends Widget> implements IDisposable {
     }
 
     // Test whether the widget has focus.
-    let focused = widget.node.contains(document.activeElement);
+    let focused = widget.node.contains(widget.node.ownerDocument.activeElement);
 
     // Set up the initial focus number.
     let n = focused ? this._counter++ : -1;

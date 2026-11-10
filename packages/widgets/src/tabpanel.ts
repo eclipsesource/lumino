@@ -418,7 +418,7 @@ export namespace TabPanel {
     /**
      * The document to use with the tab panel.
      *
-     * The default is the global `document` instance.
+     * The default is the document which owns the tab bar node.
      */
     document?: Document | ShadowRoot;
 
