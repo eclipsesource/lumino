@@ -75,7 +75,7 @@ export namespace ElementExt {
    * @returns The box sizing data for the specified element.
    */
   export function boxSizing(element: Element): IBoxSizing {
-    let style = window.getComputedStyle(element);
+    let style = Private.getComputedStyle(element);
     let bt = parseFloat(style.borderTopWidth!) || 0;
     let bl = parseFloat(style.borderLeftWidth!) || 0;
     let br = parseFloat(style.borderRightWidth!) || 0;
@@ -133,7 +133,7 @@ export namespace ElementExt {
    * @returns The size limit data for the specified element.
    */
   export function sizeLimits(element: Element): ISizeLimits {
-    let style = window.getComputedStyle(element);
+    let style = Private.getComputedStyle(element);
     let minWidth = parseFloat(style.minWidth!) || 0;
     let minHeight = parseFloat(style.minHeight!) || 0;
     let maxWidth = parseFloat(style.maxWidth!) || Infinity;
@@ -209,5 +209,20 @@ export namespace ElementExt {
       area.scrollTop -= ar.bottom - er.bottom;
       return;
     }
+  }
+}
+
+/**
+ * The namespace for the module implementation details.
+ */
+namespace Private {
+  /**
+   * Get the computed style of an element using the window of its document.
+   *
+   * Falls back to the global `window` if the document has no window.
+   */
+  export function getComputedStyle(element: Element): CSSStyleDeclaration {
+    const view = element.ownerDocument.defaultView ?? window;
+    return view.getComputedStyle(element);
   }
 }

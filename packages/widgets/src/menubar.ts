@@ -692,7 +692,7 @@ export class MenuBar extends Widget {
       // bar will take focus over the menu that is being opened.
       event.preventDefault();
       const position = this._positionForMenu(index);
-      Menu.saveWindowData();
+      Menu.saveWindowData(this.node.ownerDocument);
       // Begin DOM modifications.
       this.activeIndex = index;
       this._openChildMenu(position);
@@ -729,7 +729,7 @@ export class MenuBar extends Widget {
       index >= 0 && this._childMenu ? this._positionForMenu(index) : null;
 
     // Before any modification, update window data.
-    Menu.saveWindowData();
+    Menu.saveWindowData(this.node.ownerDocument);
 
     // Begin DOM modifications.
 
@@ -808,7 +808,7 @@ export class MenuBar extends Widget {
     if (oldMenu) {
       oldMenu.close();
     } else {
-      document.addEventListener('pointerdown', this, true);
+      this.node.ownerDocument.addEventListener('pointerdown', this, true);
     }
 
     // Update the tab focus index and ensure the menu bar is updated.
@@ -827,9 +827,12 @@ export class MenuBar extends Widget {
       this.addClass('lm-mod-active');
     }
 
-    // Open the new menu at the computed location.
+    // Open the new menu at the computed location in the menu bar document.
     if (newMenu.items.length > 0) {
-      newMenu.open(left, top, this._forceItemsPosition);
+      newMenu.open(left, top, {
+        host: this.node.ownerDocument.body,
+        ...this._forceItemsPosition
+      });
     }
   }
 
@@ -847,7 +850,7 @@ export class MenuBar extends Widget {
     this.removeClass('lm-mod-active');
 
     // Remove the document listeners.
-    document.removeEventListener('pointerdown', this, true);
+    this.node.ownerDocument.removeEventListener('pointerdown', this, true);
 
     // Clear the internal menu reference.
     let menu = this._childMenu;
@@ -873,7 +876,7 @@ export class MenuBar extends Widget {
     this.removeClass('lm-mod-active');
 
     // Remove the document listeners.
-    document.removeEventListener('pointerdown', this, true);
+    this.node.ownerDocument.removeEventListener('pointerdown', this, true);
 
     // Clear the internal menu reference.
     this._childMenu = null;

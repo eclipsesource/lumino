@@ -59,6 +59,38 @@ const STYLE_TEXT = `
 }
 `;
 
+/**
+ * Create an element in a same-origin iframe and spy on the iframe window
+ * `getComputedStyle`.
+ */
+function createSecondaryElement(className: string): {
+  element: HTMLElement;
+  calls: () => number;
+  dispose: () => void;
+} {
+  const iframe = document.createElement('iframe');
+  document.body.appendChild(iframe);
+  const view = iframe.contentWindow!;
+  const doc = iframe.contentDocument!;
+  const style = doc.createElement('style');
+  style.textContent = STYLE_TEXT;
+  doc.head.appendChild(style);
+  const element = doc.createElement('div');
+  element.className = className;
+  doc.body.appendChild(element);
+  let count = 0;
+  const original = view.getComputedStyle;
+  view.getComputedStyle = (elt: Element, pseudo?: string | null) => {
+    count++;
+    return original.call(view, elt, pseudo);
+  };
+  return {
+    element,
+    calls: () => count,
+    dispose: () => iframe.remove()
+  };
+}
+
 describe('@lumino/domutils', () => {
   describe('ElementExt', () => {
     const styleNode = document.createElement('style');
@@ -112,6 +144,15 @@ describe('@lumino/domutils', () => {
         expect(sizing.verticalSum).to.equal(0);
         expect(sizing.horizontalSum).to.equal(0);
       });
+
+      it('should use the window of the element document', () => {
+        const secondary = createSecondaryElement('box-sizing');
+        let box = ElementExt.boxSizing(secondary.element);
+        expect(secondary.calls()).to.equal(1);
+        expect(box.borderTop).to.equal(10);
+        expect(box.paddingLeft).to.equal(12);
+        secondary.dispose();
+      });
     });
 
     describe('sizeLimits()', () => {
@@ -130,6 +171,22 @@ describe('@lumino/domutils', () => {
         expect(limits.minHeight).to.equal(0);
         expect(limits.maxWidth).to.equal(Infinity);
         expect(limits.maxHeight).to.equal(Infinity);
+      });
+
+      it('should use the window of the element document', () => {
+        const secondary = createSecondaryElement('size-limits');
+        let limits = ElementExt.sizeLimits(secondary.element);
+        expect(secondary.calls()).to.equal(1);
+        expect(limits.minWidth).to.equal(90);
+        expect(limits.maxHeight).to.equal(105);
+        secondary.dispose();
+      });
+
+      it('should fall back to the global window without a document window', () => {
+        const doc = document.implementation.createHTMLDocument('');
+        const element = doc.createElement('div');
+        doc.body.appendChild(element);
+        expect(() => ElementExt.sizeLimits(element)).to.not.throw();
       });
     });
 

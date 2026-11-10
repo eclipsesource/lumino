@@ -76,10 +76,15 @@ export class ContextMenu {
    * This method will populate the context menu with items which match
    * the propagation path of the event, then open the menu at the mouse
    * position indicated by the event.
+   *
+   * The menu opens in the document of the event target.
    */
   open(event: MouseEvent): boolean {
+    // Open the menu in the document the event originated from.
+    const doc = Private.documentOf(event.target);
+
     // Prior to any DOM modifications update the window data.
-    Menu.saveWindowData();
+    Menu.saveWindowData(doc);
 
     // Clear the current contents of the context menu.
     this.menu.clearItems();
@@ -108,7 +113,7 @@ export class ContextMenu {
     }
 
     // Open the context menu at the current mouse position.
-    this.menu.open(event.clientX, event.clientY);
+    this.menu.open(event.clientX, event.clientY, { host: doc.body });
 
     // Indicate success.
     return true;
@@ -226,6 +231,22 @@ namespace Private {
   }
 
   /**
+   * Get the document which owns an event target.
+   *
+   * Falls back to the global `document` if the target is not a node.
+   */
+  export function documentOf(target: EventTarget | null): Document {
+    const node = target as Node | null;
+    if (node?.ownerDocument) {
+      return node.ownerDocument;
+    }
+    if (node?.nodeType === Node.DOCUMENT_NODE) {
+      return node as Document;
+    }
+    return document;
+  }
+
+  /**
    * Find the items which match a context menu event.
    *
    * The results are sorted by DOM level, specificity, and rank.
@@ -257,7 +278,10 @@ namespace Private {
     // If that happens, search for a new target node by point. If that
     // node is still dangling, bail.
     if (!currentTarget.contains(target)) {
-      target = document.elementFromPoint(event.clientX, event.clientY);
+      target = documentOf(currentTarget).elementFromPoint(
+        event.clientX,
+        event.clientY
+      );
       if (!target || !currentTarget.contains(target)) {
         return null;
       }
