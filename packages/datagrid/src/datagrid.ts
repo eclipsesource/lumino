@@ -1842,7 +1842,7 @@ export class DataGrid extends Widget {
     // Allow the user to cancel a large copy request.
     if (cellCount > warningThreshold) {
       let msg = `Copying ${cellCount} cells may take a while. Continue?`;
-      if (!window.confirm(msg)) {
+      if (!Private.windowOf(this.node).confirm(msg)) {
         return;
       }
     }
@@ -2071,7 +2071,7 @@ export class DataGrid extends Widget {
    * A message handler invoked on a `'before-attach'` message.
    */
   protected onBeforeAttach(msg: Message): void {
-    window.addEventListener('resize', this);
+    Private.windowOf(this.node).addEventListener('resize', this);
     this.node.addEventListener('wheel', this);
     this._viewport.node.addEventListener('keydown', this);
     this._viewport.node.addEventListener('mousedown', this);
@@ -2087,7 +2087,7 @@ export class DataGrid extends Widget {
    * A message handler invoked on an `'after-detach'` message.
    */
   protected onAfterDetach(msg: Message): void {
-    window.removeEventListener('resize', this);
+    Private.windowOf(this.node).removeEventListener('resize', this);
     this.node.removeEventListener('wheel', this);
     this._viewport.node.removeEventListener('keydown', this);
     this._viewport.node.removeEventListener('mousedown', this);
@@ -3114,11 +3114,12 @@ export class DataGrid extends Widget {
     event.stopPropagation();
 
     // Add the extra document listeners.
-    document.addEventListener('keydown', this, true);
-    document.addEventListener('mouseup', this, true);
-    document.addEventListener('mousedown', this, true);
-    document.addEventListener('mousemove', this, true);
-    document.addEventListener('contextmenu', this, true);
+    const doc = this.node.ownerDocument;
+    doc.addEventListener('keydown', this, true);
+    doc.addEventListener('mouseup', this, true);
+    doc.addEventListener('mousedown', this, true);
+    doc.addEventListener('mousemove', this, true);
+    doc.addEventListener('contextmenu', this, true);
 
     // Flip the mousedown flag.
     this._mousedown = true;
@@ -3251,11 +3252,12 @@ export class DataGrid extends Widget {
     }
 
     // Remove the document listeners.
-    document.removeEventListener('keydown', this, true);
-    document.removeEventListener('mouseup', this, true);
-    document.removeEventListener('mousedown', this, true);
-    document.removeEventListener('mousemove', this, true);
-    document.removeEventListener('contextmenu', this, true);
+    const doc = this.node.ownerDocument;
+    doc.removeEventListener('keydown', this, true);
+    doc.removeEventListener('mouseup', this, true);
+    doc.removeEventListener('mousedown', this, true);
+    doc.removeEventListener('mousemove', this, true);
+    doc.removeEventListener('contextmenu', this, true);
   }
 
   /**
@@ -3263,7 +3265,7 @@ export class DataGrid extends Widget {
    */
   private _refreshDPI(): void {
     // Get the best integral value for the dpi ratio.
-    let dpiRatio = Math.ceil(window.devicePixelRatio);
+    let dpiRatio = Math.ceil(Private.windowOf(this.node).devicePixelRatio);
 
     // Bail early if the computed dpi ratio has not changed.
     if (this._dpiRatio === dpiRatio) {
@@ -6800,6 +6802,15 @@ export namespace DataGrid {
  * The namespace for the module implementation details.
  */
 namespace Private {
+  /**
+   * Get the window of the document which owns a node.
+   *
+   * Falls back to the global `window` if the document has no window.
+   */
+  export function windowOf(node: Node): Window {
+    return node.ownerDocument?.defaultView ?? window;
+  }
+
   /**
    * A singleton `scroll-request` conflatable message.
    */

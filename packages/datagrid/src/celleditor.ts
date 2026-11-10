@@ -1292,7 +1292,7 @@ export class OptionCellEditor extends CellEditor {
     super.dispose();
 
     if (this._isMultiSelect) {
-      document.body.removeChild(this._select);
+      this._select.remove();
     }
   }
 
@@ -1317,7 +1317,7 @@ export class OptionCellEditor extends CellEditor {
         const option = this._select.options.item(i);
         option!.selected = values.indexOf(option!.value) !== -1;
       }
-      document.body.appendChild(this._select);
+      cell.grid.node.ownerDocument.body.appendChild(this._select);
     } else {
       this._select.value = this._deserialize(cellInfo.data) as string;
       this.editorContainer.appendChild(this._select);
@@ -1626,7 +1626,7 @@ export namespace CellEditor {
       this._message = options.message || '';
       this._placement = options.placement || 'bottom';
 
-      Widget.attach(this, document.body);
+      Widget.attach(this, this._target.ownerDocument.body);
 
       if (options.timeout && options.timeout > 0) {
         setTimeout(() => {

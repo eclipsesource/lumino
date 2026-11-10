@@ -193,7 +193,7 @@ export class BasicMouseHandler implements DataGrid.IMouseHandler {
       }
 
       // Override the document cursor.
-      let override = Drag.overrideCursor('default');
+      let override = Drag.overrideCursor('default', grid.node.ownerDocument);
 
       // Set up the press data.
       this._pressData = {
@@ -274,7 +274,7 @@ export class BasicMouseHandler implements DataGrid.IMouseHandler {
       let size = grid.columnSize(rgn, index);
 
       // Override the document cursor.
-      let override = Drag.overrideCursor(cursor);
+      let override = Drag.overrideCursor(cursor, grid.node.ownerDocument);
 
       // Create the temporary press data.
       this._pressData = { type, region: rgn, index, size, clientX, override };
@@ -299,7 +299,7 @@ export class BasicMouseHandler implements DataGrid.IMouseHandler {
       let size = grid.rowSize(rgn, index);
 
       // Override the document cursor.
-      let override = Drag.overrideCursor(cursor);
+      let override = Drag.overrideCursor(cursor, grid.node.ownerDocument);
 
       // Create the temporary press data.
       this._pressData = { type, region: rgn, index, size, clientY, override };
@@ -319,7 +319,7 @@ export class BasicMouseHandler implements DataGrid.IMouseHandler {
     }
 
     // Override the document cursor.
-    let override = Drag.overrideCursor('default');
+    let override = Drag.overrideCursor('default', grid.node.ownerDocument);
 
     // Set up the press data.
     this._pressData = {
