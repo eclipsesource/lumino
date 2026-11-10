@@ -169,6 +169,9 @@ export class BoxLayout extends PanelLayout {
     // Create and add a new sizer for the widget.
     ArrayExt.insert(this._sizers, index, new BoxSizer());
 
+    // Adopt the widget's node into the parent document.
+    Utils.adoptNode(widget.node, this.parent!.node);
+
     // Send a `'before-attach'` message if the parent is attached.
     if (this.parent!.isAttached) {
       MessageLoop.sendMessage(widget, Widget.Msg.BeforeAttach);

@@ -25,6 +25,8 @@ import { Layout } from './layout';
 
 import { Title } from './title';
 
+import { Utils } from './utils';
+
 /**
  * The base class of the lumino widget hierarchy.
  *
@@ -1129,9 +1131,7 @@ export namespace Widget {
     if (!host.isConnected) {
       throw new Error('Host is not attached.');
     }
-    if (widget.node.ownerDocument !== host.ownerDocument) {
-      host.ownerDocument.adoptNode(widget.node);
-    }
+    Utils.adoptNode(widget.node, host);
     MessageLoop.sendMessage(widget, Widget.Msg.BeforeAttach);
     host.insertBefore(widget.node, ref);
     MessageLoop.sendMessage(widget, Widget.Msg.AfterAttach);

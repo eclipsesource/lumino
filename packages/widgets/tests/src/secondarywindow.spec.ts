@@ -6,10 +6,25 @@ import { CommandRegistry } from '@lumino/commands';
 
 import { MessageLoop } from '@lumino/messaging';
 
-import { ContextMenu, Menu, MenuBar, Widget } from '@lumino/widgets';
+import {
+  AccordionPanel,
+  BoxPanel,
+  ContextMenu,
+  DockPanel,
+  GridLayout,
+  Menu,
+  MenuBar,
+  Panel,
+  SingletonLayout,
+  SplitPanel,
+  StackedPanel,
+  TabPanel,
+  Widget
+} from '@lumino/widgets';
 
 import {
   createSecondaryDocument,
+  DocumentWidget,
   ISecondaryDocument
 } from './secondarydocument';
 
@@ -148,6 +163,69 @@ describe('@lumino/widgets', () => {
         widget.dispose();
       }
       secondary.dispose();
+    });
+
+    describe('Layout', () => {
+      /**
+       * Create a parent widget and a function adding a child to it.
+       */
+      const layouts: {
+        [name: string]: () => [Widget, (child: Widget) => void];
+      } = {
+        PanelLayout: () => {
+          const panel = new Panel();
+          return [panel, child => panel.addWidget(child)];
+        },
+        BoxLayout: () => {
+          const panel = new BoxPanel();
+          return [panel, child => panel.addWidget(child)];
+        },
+        SplitLayout: () => {
+          const panel = new SplitPanel();
+          return [panel, child => panel.addWidget(child)];
+        },
+        AccordionLayout: () => {
+          const panel = new AccordionPanel();
+          return [panel, child => panel.addWidget(child)];
+        },
+        StackedLayout: () => {
+          const panel = new StackedPanel();
+          return [panel, child => panel.addWidget(child)];
+        },
+        TabPanel: () => {
+          const panel = new TabPanel();
+          return [panel, child => panel.addWidget(child)];
+        },
+        DockLayout: () => {
+          const panel = new DockPanel();
+          return [panel, child => panel.addWidget(child)];
+        },
+        GridLayout: () => {
+          const parent = new Widget();
+          const layout = new GridLayout();
+          parent.layout = layout;
+          return [parent, child => layout.addWidget(child)];
+        },
+        SingletonLayout: () => {
+          const parent = new Widget();
+          const layout = new SingletonLayout();
+          parent.layout = layout;
+          return [parent, child => (layout.widget = child)];
+        }
+      };
+
+      for (const [name, create] of Object.entries(layouts)) {
+        it(`should adopt children added to an attached ${name}`, () => {
+          const [parent, add] = create();
+          track(parent);
+          Widget.attach(parent, secondary.document.body);
+          const child = new DocumentWidget();
+          add(child);
+          expect(child.beforeAttachDocument).to.equal(secondary.document);
+          expect(child.node.ownerDocument).to.equal(secondary.document);
+          expect(child.isAttached).to.equal(true);
+        });
+      }
     });
 
     describe('Menu', () => {

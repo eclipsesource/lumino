@@ -17,6 +17,8 @@ import { Layout, LayoutItem } from './layout';
 
 import { PanelLayout } from './panellayout';
 
+import { Utils } from './utils';
+
 import { Widget } from './widget';
 
 /**
@@ -108,6 +110,9 @@ export class StackedLayout extends PanelLayout {
 
     // Create and add a new layout item for the widget.
     ArrayExt.insert(this._items, index, new LayoutItem(widget));
+
+    // Adopt the widget's node into the parent document.
+    Utils.adoptNode(widget.node, this.parent!.node);
 
     // Send a `'before-attach'` message if the parent is attached.
     if (this.parent!.isAttached) {

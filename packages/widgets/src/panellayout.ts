@@ -13,6 +13,8 @@ import { MessageLoop } from '@lumino/messaging';
 
 import { Layout } from './layout';
 
+import { Utils } from './utils';
+
 import { Widget } from './widget';
 
 /**
@@ -206,6 +208,9 @@ export class PanelLayout extends Layout {
     // Look up the next sibling reference node.
     let ref = this.parent!.node.children[index];
 
+    // Adopt the widget's node into the parent document.
+    Utils.adoptNode(widget.node, this.parent!.node);
+
     // Send a `'before-attach'` message if the parent is attached.
     if (this.parent!.isAttached) {
       MessageLoop.sendMessage(widget, Widget.Msg.BeforeAttach);
@@ -260,6 +265,9 @@ export class PanelLayout extends Layout {
 
     // Look up the next sibling reference node.
     let ref = this.parent!.node.children[toIndex];
+
+    // Adopt the widget's node into the parent document.
+    Utils.adoptNode(widget.node, this.parent!.node);
 
     // Send a `'before-attach'` message if the parent is attached.
     if (this.parent!.isAttached) {

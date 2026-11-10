@@ -19,6 +19,8 @@ import { BoxEngine, BoxSizer } from './boxengine';
 
 import { Layout, LayoutItem } from './layout';
 
+import { Utils } from './utils';
+
 import { Widget } from './widget';
 
 /**
@@ -370,6 +372,9 @@ export class GridLayout extends Layout {
    * @param widget - The widget to attach to the parent.
    */
   protected attachWidget(widget: Widget): void {
+    // Adopt the widget's node into the parent document.
+    Utils.adoptNode(widget.node, this.parent!.node);
+
     // Send a `'before-attach'` message if the parent is attached.
     if (this.parent!.isAttached) {
       MessageLoop.sendMessage(widget, Widget.Msg.BeforeAttach);

@@ -17,6 +17,7 @@ import { Layout, Panel, Title, Widget } from '@lumino/widgets';
 
 import {
   createSecondaryDocument,
+  DocumentWidget,
   ISecondaryDocument
 } from './secondarydocument';
 
@@ -87,15 +88,6 @@ export class LogWidget extends Widget {
     super.onChildRemoved(msg);
     this.methods.push('onChildRemoved');
     this.raw.push(msg);
-  }
-}
-
-class DocumentWidget extends Widget {
-  beforeAttachDocument: Document | null = null;
-
-  protected onBeforeAttach(msg: Message): void {
-    super.onBeforeAttach(msg);
-    this.beforeAttachDocument = this.node.ownerDocument;
   }
 }
 

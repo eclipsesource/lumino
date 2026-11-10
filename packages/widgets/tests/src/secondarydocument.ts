@@ -1,5 +1,20 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
+import { Message } from '@lumino/messaging';
+
+import { Widget } from '@lumino/widgets';
+
+/**
+ * A widget which records its owner document in `onBeforeAttach`.
+ */
+export class DocumentWidget extends Widget {
+  beforeAttachDocument: Document | null = null;
+
+  protected onBeforeAttach(msg: Message): void {
+    super.onBeforeAttach(msg);
+    this.beforeAttachDocument = this.node.ownerDocument;
+  }
+}
 
 /**
  * A second document driven by the main window, like a secondary window.

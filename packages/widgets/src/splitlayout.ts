@@ -302,6 +302,9 @@ export class SplitLayout extends PanelLayout {
     ArrayExt.insert(this._sizers, index, sizer);
     ArrayExt.insert(this._handles, index, handle);
 
+    // Adopt the widget's node into the parent document.
+    Utils.adoptNode(widget.node, this.parent!.node);
+
     // Send a `'before-attach'` message if the parent is attached.
     if (this.parent!.isAttached) {
       MessageLoop.sendMessage(widget, Widget.Msg.BeforeAttach);

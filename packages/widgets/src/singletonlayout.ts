@@ -11,6 +11,8 @@ import { MessageLoop } from '@lumino/messaging';
 
 import { Layout } from './layout';
 
+import { Utils } from './utils';
+
 import { Widget } from './widget';
 
 /**
@@ -140,6 +142,9 @@ export class SingletonLayout extends Layout {
    * node is added to the parent's node.
    */
   protected attachWidget(widget: Widget): void {
+    // Adopt the widget's node into the parent document.
+    Utils.adoptNode(widget.node, this.parent!.node);
+
     // Send a `'before-attach'` message if the parent is attached.
     if (this.parent!.isAttached) {
       MessageLoop.sendMessage(widget, Widget.Msg.BeforeAttach);

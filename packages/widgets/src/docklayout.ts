@@ -552,6 +552,9 @@ export class DockLayout extends Layout {
     // Create the layout item for the widget.
     this._items.set(widget, new LayoutItem(widget));
 
+    // Adopt the widget's node into the parent document.
+    Utils.adoptNode(widget.node, this.parent!.node);
+
     // Send a `'before-attach'` message if the parent is attached.
     if (this.parent!.isAttached) {
       MessageLoop.sendMessage(widget, Widget.Msg.BeforeAttach);
